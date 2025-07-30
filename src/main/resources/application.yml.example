@@ -1,0 +1,17 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: intelsync-ingestion-service
+
+elasticsearch:
+  host: https://localhost:9200
+  username: ${ELASTICSEARCH_USER}
+  password: ${ELASTICSEARCH_PASSWORD}
+
+
+logging:
+  level:
+    root: INFO
+    com.cogneworx: DEBUG

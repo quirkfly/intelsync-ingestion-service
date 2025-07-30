@@ -1,0 +1,402 @@
+$ curl -F "file=@/home/peterd/Downloads/Profile.pdf" http://localhost:8081/api/ingest/upload
+{"documentId":"d34e8c0a-caa0-44eb-aaa2-867f0ca32f1b","message":"File processed and indexed successfully"}
+
+[peterd:~/job_stuff … intelsync-ingestion-service] [base] 130 $ docker logs -f elasticsearch
+
+{"@timestamp":"2025-07-30T10:57:43.273Z", "log.level": "INFO", "message":"[intel-documents] creating index, cause [auto(bulk api)], templates [], shards [1]/[1]", "ecs.version": "1.2.0","service.name":"ES_ECS","event.dataset":"elasticsearch.server","process.thread.name":"elasticsearch[931a0f979c3a][masterService#updateTask][T#12]","log.logger":"org.elasticsearch.cluster.metadata.MetadataCreateIndexService","elasticsearch.cluster.uuid":"8Dagl0tvQQy5dEgflEqM4A","elasticsearch.node.id":"lYxShBfsRK6pvqAA5PVq-g","elasticsearch.node.name":"931a0f979c3a","elasticsearch.cluster.name":"docker-cluster"}
+{"@timestamp":"2025-07-30T10:57:43.441Z", "log.level": "INFO", "message":"reloading search analyzers", "ecs.version": "1.2.0","service.name":"ES_ECS","event.dataset":"elasticsearch.server","process.thread.name":"elasticsearch[931a0f979c3a][generic][T#2]","log.logger":"org.elasticsearch.index.mapper.MapperService","elasticsearch.cluster.uuid":"8Dagl0tvQQy5dEgflEqM4A","elasticsearch.node.id":"lYxShBfsRK6pvqAA5PVq-g","elasticsearch.node.name":"931a0f979c3a","elasticsearch.cluster.name":"docker-cluster","tags":[" [intel-documents]"]}
+{"@timestamp":"2025-07-30T10:57:43.716Z", "log.level": "INFO", "message":"[intel-documents/izFuY2jRSMKeZiJEMrGdMQ] create_mapping", "ecs.version": "1.2.0","service.name":"ES_ECS","event.dataset":"elasticsearch.server","process.thread.name":"elasticsearch[931a0f979c3a][masterService#updateTask][T#12]","log.logger":"org.elasticsearch.cluster.metadata.MetadataMappingService","elasticsearch.cluster.uuid":"8Dagl0tvQQy5dEgflEqM4A","elasticsearch.node.id":"lYxShBfsRK6pvqAA5PVq-g","elasticsearch.node.name":"931a0f979c3a","elasticsearch.cluster.name":"docker-cluster"}
+
+
+[peterd:~/job_stuff … ync-backend/intelsync-ingestion-service] [base] 50m36s $ docker network create elastic-net
+39ed4ef0b390593fa561cf9035c7a543b45c93d9746064ba11cddad1bb169539
+
+$ docker run -d   --name elasticsearch   --net elastic-net   -p 9200:9200   -e "discovery.type=single-node"   docker.elastic.co/elasticsearch/elasticsearch:8.10.0
+4f0653dc148e7f01b11fd4ecc4c38c7d3a5ad78cac7363d6b5264c35d9e961ed
+[peterd:~/job_stuff … ync-backend/intelsync-ingestion-service] [base] 56m14s $ docker ps
+CONTAINER ID   IMAGE                                                  COMMAND                  CREATED         STATUS         PORTS                                                 NAMES
+4f0653dc148e   docker.elastic.co/elasticsearch/elasticsearch:8.10.0   "/bin/tini -- /usr/l…"   4 seconds ago   Up 3 seconds   0.0.0.0:9200->9200/tcp, :::9200->9200/tcp, 9300/tcp   elasticsearch
+[peterd:~/job_stuff … ync-backend/intelsync-ingestion-service] [base] 56m18s $ docker run -d \
+>   --name kibana \
+>   --net elastic-net \
+>   -p 5601:5601 \
+>   -e "ELASTICSEARCH_HOSTS=http://elasticsearch:9200" \
+>   docker.elastic.co/kibana/kibana:8.10.2
+docker: Error response from daemon: Conflict. The container name "/kibana" is already in use by container "5ed815c4b28b944859caab9da094ad4f7d92e629ec5a68d7cf5de1e53339a2ed". You have to remove (or rename) that container to be able to reuse that name.
+See 'docker run --help'.
+[peterd:~/job_stuff … ync-backend/intelsync-ingestion-service] [base] 56m24s 125 $ docker container rm -f kibana 
+kibana
+[peterd:~/job_stuff … ync-backend/intelsync-ingestion-service] [base] 56m32s $ docker run -d   --name kibana   --net elastic-net   -p 5601:5601   -e "ELASTICSEARCH_HOSTS=http://elasticsearch:9200"   docker.elastic.co/kibana/kibana:8.10.2
+116e2ce7b5a8bad5102007b58ccd078b1216e1d04da70098a8432c9d617643cd
+[peterd:~/job_stuff … ync-backend/intelsync-ingestion-service] [base] 56m34s $ docker ps
+CONTAINER ID   IMAGE                                                  COMMAND                  CREATED          STATUS          PORTS                                                 NAMES
+116e2ce7b5a8   docker.elastic.co/kibana/kibana:8.10.2                 "/bin/tini -- /usr/l…"   4 seconds ago    Up 3 seconds    0.0.0.0:5601->5601/tcp, :::5601->5601/tcp             kibana
+4f0653dc148e   docker.elastic.co/elasticsearch/elasticsearch:8.10.0   "/bin/tini -- /usr/l…"   24 seconds ago   Up 23 seconds   0.0.0.0:9200->9200/tcp, :::9200->9200/tcp, 9300/tcp   elasticsearch
+[peterd:~/job_stuff … ync-backend/intelsync-ingestion-service] [base] 56m38s $ docker exec -it elasticsearch /bin/bash
+elasticsearch@4f0653dc148e:~$ bin/elasticsearch-create-enrollment-token --scope kibana
+WARNING: Owner of file [/usr/share/elasticsearch/config/users] used to be [root], but now is [elasticsearch]
+WARNING: Owner of file [/usr/share/elasticsearch/config/users_roles] used to be [root], but now is [elasticsearch]
+eyJ2ZXIiOiI4LjEwLjAiLCJhZHIiOlsiMTcyLjE4LjAuMjo5MjAwIl0sImZnciI6ImM1YmQ0OGI4ZDFmMzg0MjkwZDI2Nzg3ZTBlMjYxMjlhMzU2NjgwMjlmMTliMzk0YWU3ZmFmZTViOTY2YmNjZDQiLCJrZXkiOiJIZGtEVzVnQl9JYkppZjdSaUJnWDpCUGFzdGxSV1NtV3BYcHpwRWwwY3dnIn0=
+elasticsearch@4f0653dc148e:~$ 
+
+$ docker logs -f kibana
+Kibana is currently running with legacy OpenSSL providers enabled! For details and instructions on how to disable see https://www.elastic.co/guide/en/kibana/8.10/production.html#openssl-legacy-provider
+{"log.level":"info","@timestamp":"2025-07-30T11:05:37.417Z","log":{"logger":"elastic-apm-node"},"agentVersion":"3.49.1","env":{"pid":6,"proctitle":"/usr/share/kibana/bin/../node/bin/node","os":"linux 5.4.0-216-generic","arch":"x64","host":"116e2ce7b5a8","timezone":"UTC+00","runtime":"Node.js v18.17.1"},"config":{"serviceName":{"source":"start","value":"kibana","commonName":"service_name"},"serviceVersion":{"source":"start","value":"8.10.2","commonName":"service_version"},"serverUrl":{"source":"start","value":"https://kibana-cloud-apm.apm.us-east-1.aws.found.io/","commonName":"server_url"},"logLevel":{"source":"default","value":"info","commonName":"log_level"},"active":{"source":"start","value":true},"contextPropagationOnly":{"source":"start","value":true},"environment":{"source":"start","value":"production"},"logUncaughtExceptions":{"source":"start","value":true},"globalLabels":{"source":"start","value":[["git_rev","29555604d9c1721a91c9b948fd3ae1193e944ce4"]],"sourceValue":{"git_rev":"29555604d9c1721a91c9b948fd3ae1193e944ce4"}},"secretToken":{"source":"start","value":"[REDACTED]","commonName":"secret_token"},"breakdownMetrics":{"source":"start","value":false},"captureSpanStackTraces":{"source":"start","sourceValue":false},"centralConfig":{"source":"start","value":false},"metricsInterval":{"source":"start","value":120,"sourceValue":"120s"},"propagateTracestate":{"source":"start","value":true},"transactionSampleRate":{"source":"start","value":0.1,"commonName":"transaction_sample_rate"},"captureBody":{"source":"start","value":"off","commonName":"capture_body"},"captureHeaders":{"source":"start","value":false}},"activationMethod":"require","ecs":{"version":"1.6.0"},"message":"Elastic APM Node.js Agent v3.49.1"}
+[2025-07-30T11:05:39.858+00:00][INFO ][root] Kibana is starting
+[2025-07-30T11:05:40.045+00:00][INFO ][node] Kibana process configured with roles: [background_tasks, ui]
+[2025-07-30T11:05:58.452+00:00][INFO ][plugins-service] Plugin "cloudChat" is disabled.
+[2025-07-30T11:05:58.460+00:00][INFO ][plugins-service] Plugin "cloudExperiments" is disabled.
+[2025-07-30T11:05:58.460+00:00][INFO ][plugins-service] Plugin "cloudFullStory" is disabled.
+[2025-07-30T11:05:58.461+00:00][INFO ][plugins-service] Plugin "cloudGainsight" is disabled.
+[2025-07-30T11:05:58.606+00:00][INFO ][plugins-service] Plugin "profiling" is disabled.
+[2025-07-30T11:05:58.654+00:00][INFO ][plugins-service] Plugin "securitySolutionServerless" is disabled.
+[2025-07-30T11:05:58.655+00:00][INFO ][plugins-service] Plugin "serverless" is disabled.
+[2025-07-30T11:05:58.655+00:00][INFO ][plugins-service] Plugin "serverlessObservability" is disabled.
+[2025-07-30T11:05:58.655+00:00][INFO ][plugins-service] Plugin "serverlessSearch" is disabled.
+[2025-07-30T11:05:58.976+00:00][INFO ][http.server.Preboot] http server running at http://0.0.0.0:5601
+[2025-07-30T11:05:59.140+00:00][INFO ][plugins-system.preboot] Setting up [1] plugins: [interactiveSetup]
+[2025-07-30T11:05:59.143+00:00][INFO ][preboot] "interactiveSetup" plugin is holding setup: Validating Elasticsearch connection configuration…
+[2025-07-30T11:05:59.179+00:00][INFO ][root] Holding setup until preboot stage is completed.
+
+
+i Kibana has not been configured.
+
+Go to http://0.0.0.0:5601/?code=353073 to get started.
+
+
+
+
+Your verification code is:  353 073 
+
+
+--
+
+$ docker network inspect elastic-net
+[
+    {
+        "Name": "elastic-net",
+        "Id": "39ed4ef0b390593fa561cf9035c7a543b45c93d9746064ba11cddad1bb169539",
+        "Created": "2025-07-30T13:01:39.536567164+02:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": {},
+            "Config": [
+                {
+                    "Subnet": "172.18.0.0/16",
+                    "Gateway": "172.18.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {
+            "116e2ce7b5a8bad5102007b58ccd078b1216e1d04da70098a8432c9d617643cd": {
+                "Name": "kibana",
+                "EndpointID": "6a183438437385472aad80eef40cdf3043a78e2ac6befe19297f567490b5fd59",
+                "MacAddress": "02:42:ac:12:00:03",
+                "IPv4Address": "172.18.0.3/16",
+                "IPv6Address": ""
+            },
+            "4f0653dc148e7f01b11fd4ecc4c38c7d3a5ad78cac7363d6b5264c35d9e961ed": {
+                "Name": "elasticsearch",
+                "EndpointID": "460e64a25814046e1929b1ded58ea23b7a3b9710fbe274fe026ef55142240e2a",
+                "MacAddress": "02:42:ac:12:00:02",
+                "IPv4Address": "172.18.0.2/16",
+                "IPv6Address": ""
+            }
+        },
+        "Options": {},
+        "Labels": {}
+    }
+]
+
+
+$ docker run -d   --name kibana   --net elastic-net   -p 5601:5601   -e "ELASTICSEARCH_HOSTS=http://elasticsearch:9200"  -e "ELASTICSEARCH_USERNAME=elastic" -e "ELASTICSEARCH_PASSWORD=UTmqfPh+eGqUJMUEdnnW"  doc
+ker.elastic.co/kibana/kibana:8.10.2
+7a63b75dca40144f6cb438a04eb3c95a079f63c6b429c5647ebdf6c7206dd59e
+
+
+$ docker logs -f kibana
+Kibana is currently running with legacy OpenSSL providers enabled! For details and instructions on how to disable see https://www.elastic.co/guide/en/kibana/8.10/production.html#openssl-legacy-provider
+{"log.level":"info","@timestamp":"2025-07-30T11:11:32.512Z","log":{"logger":"elastic-apm-node"},"agentVersion":"3.49.1","env":{"pid":7,"proctitle":"/usr/share/kibana/bin/../node/bin/node","os":"linux 5.4.0-216-generic","arch":"x64","host":"7a63b75dca40","timezone":"UTC+00","runtime":"Node.js v18.17.1"},"config":{"serviceName":{"source":"start","value":"kibana","commonName":"service_name"},"serviceVersion":{"source":"start","value":"8.10.2","commonName":"service_version"},"serverUrl":{"source":"start","value":"https://kibana-cloud-apm.apm.us-east-1.aws.found.io/","commonName":"server_url"},"logLevel":{"source":"default","value":"info","commonName":"log_level"},"active":{"source":"start","value":true},"contextPropagationOnly":{"source":"start","value":true},"environment":{"source":"start","value":"production"},"logUncaughtExceptions":{"source":"start","value":true},"globalLabels":{"source":"start","value":[["git_rev","29555604d9c1721a91c9b948fd3ae1193e944ce4"]],"sourceValue":{"git_rev":"29555604d9c1721a91c9b948fd3ae1193e944ce4"}},"secretToken":{"source":"start","value":"[REDACTED]","commonName":"secret_token"},"breakdownMetrics":{"source":"start","value":false},"captureSpanStackTraces":{"source":"start","sourceValue":false},"centralConfig":{"source":"start","value":false},"metricsInterval":{"source":"start","value":120,"sourceValue":"120s"},"propagateTracestate":{"source":"start","value":true},"transactionSampleRate":{"source":"start","value":0.1,"commonName":"transaction_sample_rate"},"captureBody":{"source":"start","value":"off","commonName":"capture_body"},"captureHeaders":{"source":"start","value":false}},"activationMethod":"require","ecs":{"version":"1.6.0"},"message":"Elastic APM Node.js Agent v3.49.1"}
+[2025-07-30T11:11:35.938+00:00][INFO ][root] Kibana is starting
+[2025-07-30T11:11:36.066+00:00][INFO ][node] Kibana process configured with roles: [background_tasks, ui]
+
+
+[2025-07-30T11:11:35.938+00:00][INFO ][root] Kibana is starting
+[2025-07-30T11:11:36.066+00:00][INFO ][node] Kibana process configured with roles: [background_tasks, ui]
+[2025-07-30T11:12:02.316+00:00][INFO ][plugins-service] Plugin "cloudChat" is disabled.
+[2025-07-30T11:12:02.323+00:00][INFO ][plugins-service] Plugin "cloudExperiments" is disabled.
+[2025-07-30T11:12:02.323+00:00][INFO ][plugins-service] Plugin "cloudFullStory" is disabled.
+[2025-07-30T11:12:02.323+00:00][INFO ][plugins-service] Plugin "cloudGainsight" is disabled.
+[2025-07-30T11:12:02.470+00:00][INFO ][plugins-service] Plugin "profiling" is disabled.
+[2025-07-30T11:12:02.519+00:00][INFO ][plugins-service] Plugin "securitySolutionServerless" is disabled.
+[2025-07-30T11:12:02.520+00:00][INFO ][plugins-service] Plugin "serverless" is disabled.
+[2025-07-30T11:12:02.520+00:00][INFO ][plugins-service] Plugin "serverlessObservability" is disabled.
+[2025-07-30T11:12:02.520+00:00][INFO ][plugins-service] Plugin "serverlessSearch" is disabled.
+[2025-07-30T11:12:02.776+00:00][INFO ][root] Kibana is shutting down
+[2025-07-30T11:12:02.785+00:00][FATAL][root] Reason: [config validation of [elasticsearch].username]: value of "elastic" is forbidden. This is a superuser account that cannot write to system indices that Kibana needs to function. Use a service account token instead. Learn more: https://www.elastic.co/guide/en/elasticsearch/reference/8.0/service-accounts.html
+Error: [config validation of [elasticsearch].username]: value of "elastic" is forbidden. This is a superuser account that cannot write to system indices that Kibana needs to function. Use a service account token instead. Learn more: https://www.elastic.co/guide/en/elasticsearch/reference/8.0/service-accounts.html
+    at ensureValidConfiguration (/usr/share/kibana/node_modules/@kbn/core-config-server-internal/src/ensure_valid_configuration.js:23:11)
+    at Server.preboot (/usr/share/kibana/node_modules/@kbn/core-root-server-internal/src/server.js:154:5)
+    at Root.preboot (/usr/share/kibana/node_modules/@kbn/core-root-server-internal/src/root/index.js:47:14)
+    at bootstrap (/usr/share/kibana/node_modules/@kbn/core-root-server-internal/src/bootstrap.js:97:9)
+    at Command.<anonymous> (/usr/share/kibana/src/cli/serve/serve.js:179:5)
+
+ FATAL  Error: [config validation of [elasticsearch].username]: value of "elastic" is forbidden. This is a superuser account that cannot write to system indices that Kibana needs to function. Use a service account token instead. Learn more: https://www.elastic.co/guide/en/elasticsearch/reference/8.0/service-accounts.html
+
+
+ $ docker exec -it elasticsearch /bin/bash
+elasticsearch@4f0653dc148e:~$ bin/elasticsearch-reset-password -u kibana_system
+This tool will reset the password of the [kibana_system] user to an autogenerated value.
+The password will be printed in the console.
+Please confirm that you would like to continue [y/N]y
+J8s+WuaLnezdurEF-qny
+
+Password for the [kibana_system] user successfully reset.
+New value: J8s+WuaLnezdurEF-qny
+elasticsearch@4f0653dc148e:~$ exit
+exit
+
+$ docker logs elasticsearch --tail 5
+{"@timestamp":"2025-07-30T11:17:24.246Z", "log.level": "WARN", "message":"received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/172.18.0.2:9200, remoteAddress=/172.18.0.3:38862}", "ecs.version": "1.2.0","service.name":"ES_ECS","event.dataset":"elasticsearch.server","process.thread.name":"elasticsearch[4f0653dc148e][transport_worker][T#1]","log.logger":"org.elasticsearch.http.netty4.Netty4HttpServerTransport","elasticsearch.cluster.uuid":"Bae4Ql8-QZKBTYNKMr1K5Q","elasticsearch.node.id":"lWH-gYtMTz6nVhk9HeTGmQ","elasticsearch.node.name":"4f0653dc148e","elasticsearch.cluster.name":"docker-cluster"}
+{"@timestamp":"2025-07-30T11:17:25.250Z", "log.level": "WARN", "message":"received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/172.18.0.2:9200, remoteAddress=/172.18.0.3:38872}", "ecs.version": "1.2.0","service.name":"ES_ECS","event.dataset":"elasticsearch.server","process.thread.name":"elasticsearch[4f0653dc148e][transport_worker][T#2]","log.logger":"org.elasticsearch.http.netty4.Netty4HttpServerTransport","elasticsearch.cluster.uuid":"Bae4Ql8-QZKBTYNKMr1K5Q","elasticsearch.node.id":"lWH-gYtMTz6nVhk9HeTGmQ","elasticsearch.node.name":"4f0653dc148e","elasticsearch.cluster.name":"docker-cluster"}
+{"@timestamp":"2025-07-30T11:17:25.253Z", "log.level": "WARN", "message":"received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/172.18.0.2:9200, remoteAddress=/172.18.0.3:38880}", "ecs.version": "1.2.0","service.name":"ES_ECS","event.dataset":"elasticsearch.server","process.thread.name":"elasticsearch[4f0653dc148e][transport_worker][T#3]","log.logger":"org.elasticsearch.http.netty4.Netty4HttpServerTransport","elasticsearch.cluster.uuid":"Bae4Ql8-QZKBTYNKMr1K5Q","elasticsearch.node.id":"lWH-gYtMTz6nVhk9HeTGmQ","elasticsearch.node.name":"4f0653dc148e","elasticsearch.cluster.name":"docker-cluster"}
+{"@timestamp":"2025-07-30T11:17:25.255Z", "log.level": "WARN", "message":"received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/172.18.0.2:9200, remoteAddress=/172.18.0.3:38892}", "ecs.version": "1.2.0","service.name":"ES_ECS","event.dataset":"elasticsearch.server","process.thread.name":"elasticsearch[4f0653dc148e][transport_worker][T#4]","log.logger":"org.elasticsearch.http.netty4.Netty4HttpServerTransport","elasticsearch.cluster.uuid":"Bae4Ql8-QZKBTYNKMr1K5Q","elasticsearch.node.id":"lWH-gYtMTz6nVhk9HeTGmQ","elasticsearch.node.name":"4f0653dc148e","elasticsearch.cluster.name":"docker-cluster"}
+{"@timestamp":"2025-07-30T11:17:25.258Z", "log.level": "WARN", "message":"received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/172.18.0.2:9200, remoteAddress=/172.18.0.3:38894}", "ecs.version": "1.2.0","service.name":"ES_ECS","event.dataset":"elasticsearch.server","process.thread.name":"elasticsearch[4f0653dc148e][transport_worker][T#1]","log.logger":"org.elasticsearch.http.netty4.Netty4HttpServerTransport","elasticsearch.cluster.uuid":"Bae4Ql8-QZKBTYNKMr1K5Q","elasticsearch.node.id":"lWH-gYtMTz6nVhk9HeTGmQ","elasticsearch.node.name":"4f0653dc148e","elasticsearch.cluster.name":"docker-cluster"}
+
+
+$ docker logs -f kibana
+Kibana is currently running with legacy OpenSSL providers enabled! For details and instructions on how to disable see https://www.elastic.co/guide/en/kibana/8.10/production.html#openssl-legacy-provider
+{"log.level":"info","@timestamp":"2025-07-30T11:17:53.893Z","log":{"logger":"elastic-apm-node"},"agentVersion":"3.49.1","env":{"pid":6,"proctitle":"/usr/share/kibana/bin/../node/bin/node","os":"linux 5.4.0-216-generic","arch":"x64","host":"2b2b6cc19ec8","timezone":"UTC+00","runtime":"Node.js v18.17.1"},"config":{"serviceName":{"source":"start","value":"kibana","commonName":"service_name"},"serviceVersion":{"source":"start","value":"8.10.2","commonName":"service_version"},"serverUrl":{"source":"start","value":"https://kibana-cloud-apm.apm.us-east-1.aws.found.io/","commonName":"server_url"},"logLevel":{"source":"default","value":"info","commonName":"log_level"},"active":{"source":"start","value":true},"contextPropagationOnly":{"source":"start","value":true},"environment":{"source":"start","value":"production"},"logUncaughtExceptions":{"source":"start","value":true},"globalLabels":{"source":"start","value":[["git_rev","29555604d9c1721a91c9b948fd3ae1193e944ce4"]],"sourceValue":{"git_rev":"29555604d9c1721a91c9b948fd3ae1193e944ce4"}},"secretToken":{"source":"start","value":"[REDACTED]","commonName":"secret_token"},"breakdownMetrics":{"source":"start","value":false},"captureSpanStackTraces":{"source":"start","sourceValue":false},"centralConfig":{"source":"start","value":false},"metricsInterval":{"source":"start","value":120,"sourceValue":"120s"},"propagateTracestate":{"source":"start","value":true},"transactionSampleRate":{"source":"start","value":0.1,"commonName":"transaction_sample_rate"},"captureBody":{"source":"start","value":"off","commonName":"capture_body"},"captureHeaders":{"source":"start","value":false}},"activationMethod":"require","ecs":{"version":"1.6.0"},"message":"Elastic APM Node.js Agent v3.49.1"}
+[2025-07-30T11:17:57.165+00:00][INFO ][root] Kibana is starting
+[2025-07-30T11:17:57.244+00:00][INFO ][node] Kibana process configured with roles: [background_tasks, ui]
+
+
+
+
+
+
+
+[2025-07-30T11:18:13.440+00:00][INFO ][plugins-service] Plugin "cloudChat" is disabled.
+[2025-07-30T11:18:13.446+00:00][INFO ][plugins-service] Plugin "cloudExperiments" is disabled.
+[2025-07-30T11:18:13.447+00:00][INFO ][plugins-service] Plugin "cloudFullStory" is disabled.
+[2025-07-30T11:18:13.447+00:00][INFO ][plugins-service] Plugin "cloudGainsight" is disabled.
+[2025-07-30T11:18:13.594+00:00][INFO ][plugins-service] Plugin "profiling" is disabled.
+[2025-07-30T11:18:13.644+00:00][INFO ][plugins-service] Plugin "securitySolutionServerless" is disabled.
+[2025-07-30T11:18:13.644+00:00][INFO ][plugins-service] Plugin "serverless" is disabled.
+[2025-07-30T11:18:13.645+00:00][INFO ][plugins-service] Plugin "serverlessObservability" is disabled.
+[2025-07-30T11:18:13.645+00:00][INFO ][plugins-service] Plugin "serverlessSearch" is disabled.
+[2025-07-30T11:18:13.955+00:00][INFO ][http.server.Preboot] http server running at http://0.0.0.0:5601
+[2025-07-30T11:18:14.111+00:00][INFO ][plugins-system.preboot] Setting up [1] plugins: [interactiveSetup]
+[2025-07-30T11:18:14.155+00:00][WARN ][config.deprecation] The default mechanism for Reporting privileges will work differently in future versions, which will affect the behavior of this cluster. Set "xpack.reporting.roles.enabled" to "false" to adopt the future behavior before upgrading.
+[2025-07-30T11:18:16.016+00:00][INFO ][plugins-system.standard] Setting up [141] plugins: [devTools,translations,share,screenshotMode,usageCollection,telemetryCollectionManager,telemetryCollectionXpack,taskManager,kibanaUsageCollection,cloud,newsfeed,savedObjectsFinder,monitoringCollection,licensing,mapsEms,globalSearch,globalSearchProviders,features,guidedOnboarding,banners,licenseApiGuard,customBranding,ftrApis,fieldFormats,expressions,screenshotting,charts,esUiShared,customIntegrations,contentManagement,dataViews,home,searchprofiler,painlessLab,management,spaces,security,telemetry,licenseManagement,snapshotRestore,lists,files,encryptedSavedObjects,eventLog,actions,notifications,cloudDataMigration,advancedSettings,grokdebugger,console,bfetch,data,watcher,savedObjectsTagging,savedObjectsManagement,unifiedSearch,graph,alerting,embeddable,uiActionsEnhanced,savedSearch,presentationUtil,expressionShape,expressionRevealImage,expressionRepeatImage,expressionMetric,expressionImage,controls,fileUpload,ingestPipelines,ecsDataQualityDashboard,dataViewFieldEditor,visualizations,visTypeXy,visTypeVislib,visTypeVega,visTypeTimeseries,visTypeTimelion,visTypeTagcloud,visTypeTable,visTypeMetric,visTypeMarkdown,visTypeHeatmap,inputControlVis,expressionTagcloud,expressionPartitionVis,visTypePie,expressionMetricVis,expressionLegacyMetricVis,expressionHeatmap,expressionGauge,visTypeGauge,eventAnnotation,expressionXY,dashboard,triggersActionsUi,transform,stackConnectors,stackAlerts,ruleRegistry,lens,maps,discover,reporting,canvas,fleet,indexManagement,rollup,remoteClusters,crossClusterReplication,indexLifecycleManagement,discoverLogExplorer,cloudSecurityPosture,discoverEnhanced,dataVisualizer,cases,timelines,sessionView,kubernetesSecurity,cloudDefend,threatIntelligence,osquery,observabilityAIAssistant,logsShared,observability,observabilityOnboarding,aiops,ml,uptime,synthetics,securitySolution,securitySolutionEss,infra,upgradeAssistant,monitoring,logstash,apm,enterpriseSearch,dashboardEnhanced,dataViewManagement,assetManager]
+[2025-07-30T11:18:16.031+00:00][INFO ][plugins.taskManager] TaskManager is identified by the Kibana UUID: 766ccce6-f291-440c-8ba1-330bc7a4cc29
+[2025-07-30T11:18:16.071+00:00][INFO ][custom-branding-service] CustomBrandingService registering plugin: customBranding
+[2025-07-30T11:18:16.175+00:00][WARN ][plugins.security.config] Generating a random key for xpack.security.encryptionKey. To prevent sessions from being invalidated on restart, please set xpack.security.encryptionKey in the kibana.yml or use the bin/kibana-encryption-keys command.
+[2025-07-30T11:18:16.176+00:00][WARN ][plugins.security.config] Session cookies will be transmitted over insecure connections. This is not recommended.
+[2025-07-30T11:18:16.209+00:00][WARN ][plugins.security.config] Generating a random key for xpack.security.encryptionKey. To prevent sessions from being invalidated on restart, please set xpack.security.encryptionKey in the kibana.yml or use the bin/kibana-encryption-keys command.
+[2025-07-30T11:18:16.209+00:00][WARN ][plugins.security.config] Session cookies will be transmitted over insecure connections. This is not recommended.
+[2025-07-30T11:18:16.235+00:00][WARN ][plugins.encryptedSavedObjects] Saved objects encryption key is not set. This will severely limit Kibana functionality. Please set xpack.encryptedSavedObjects.encryptionKey in the kibana.yml or use the bin/kibana-encryption-keys command.
+[2025-07-30T11:18:16.241+00:00][WARN ][plugins.actions] APIs are disabled because the Encrypted Saved Objects plugin is missing encryption key. Please set xpack.encryptedSavedObjects.encryptionKey in the kibana.yml or use the bin/kibana-encryption-keys command.
+[2025-07-30T11:18:16.249+00:00][INFO ][plugins.notifications] Email Service Error: Email connector not specified.
+[2025-07-30T11:18:16.365+00:00][WARN ][plugins.alerting] APIs are disabled because the Encrypted Saved Objects plugin is missing encryption key. Please set xpack.encryptedSavedObjects.encryptionKey in the kibana.yml or use the bin/kibana-encryption-keys command.
+[2025-07-30T11:18:16.647+00:00][INFO ][plugins.alerting] Registering resources for context "stack".
+[2025-07-30T11:18:16.680+00:00][WARN ][plugins.reporting.config] Generating a random key for xpack.reporting.encryptionKey. To prevent sessions from being invalidated on restart, please set xpack.reporting.encryptionKey in the kibana.yml or use the bin/kibana-encryption-keys command.
+[2025-07-30T11:18:16.681+00:00][WARN ][plugins.reporting.config] Found 'server.host: "0.0.0.0"' in Kibana configuration. Reporting is not able to use this as the Kibana server hostname. To enable PNG/PDF Reporting to work, 'xpack.reporting.kibanaServer.hostname: localhost' is automatically set in the configuration. You can prevent this message by adding 'xpack.reporting.kibanaServer.hostname: localhost' in kibana.yml.
+[2025-07-30T11:18:16.744+00:00][INFO ][plugins.cloudSecurityPosture] Registered task successfully [Task: cloud_security_posture-stats_task]
+[2025-07-30T11:18:16.810+00:00][INFO ][plugins.alerting] Registering resources for context "observability.slo".
+[2025-07-30T11:18:16.856+00:00][INFO ][plugins.alerting] Registering resources for context "observability.uptime".
+[2025-07-30T11:18:16.904+00:00][INFO ][plugins.alerting] Registering resources for context "security".
+[2025-07-30T11:18:16.947+00:00][INFO ][plugins.securitySolution] {"id":"securitySolutionCases","name":"Cases","order":1100,"category":{"id":"securitySolution","label":"Security","order":4000,"euiIconType":"logoSecurity"},"app":["securitySolutionCases","kibana"],"catalogue":["securitySolution"],"cases":["securitySolution"],"privileges":{"all":{"api":["casesSuggestUserProfiles","bulkGetUserProfiles","securitySolutionFilesCasesCreate","securitySolutionFilesCasesRead","casesGetConnectorsConfigure"],"app":["securitySolutionCases","kibana"],"catalogue":["securitySolution"],"cases":{"create":["securitySolution"],"read":["securitySolution"],"update":["securitySolution"],"push":["securitySolution"]},"savedObject":{"all":["file","fileShare"],"read":["file","fileShare"]},"ui":["create_cases","read_cases","update_cases","push_cases","cases_connectors"]},"read":{"api":["casesSuggestUserProfiles","bulkGetUserProfiles","securitySolutionFilesCasesRead","casesGetConnectorsConfigure"],"app":["securitySolutionCases","kibana"],"catalogue":["securitySolution"],"cases":{"read":["securitySolution"]},"savedObject":{"all":[],"read":["file","fileShare"]},"ui":["read_cases","cases_connectors"]}},"subFeatures":[{"name":"Delete","privilegeGroups":[{"groupType":"independent","privileges":[{"api":["securitySolutionFilesCasesDelete"],"id":"cases_delete","name":"Delete cases and comments","includeIn":"all","savedObject":{"all":["file","fileShare"],"read":["file","fileShare"]},"cases":{"delete":["securitySolution"]},"ui":["delete_cases"]}]}]}]}
+[2025-07-30T11:18:16.950+00:00][INFO ][plugins.securitySolution] {"id":"securitySolutionAssistant","name":"Elastic AI Assistant","order":1100,"category":{"id":"securitySolution","label":"Security","order":4000,"euiIconType":"logoSecurity"},"app":["securitySolutionAssistant","kibana"],"catalogue":["securitySolution"],"minimumLicense":"enterprise","privileges":{"all":{"api":[],"app":["securitySolutionAssistant","kibana"],"catalogue":["securitySolution"],"savedObject":{"all":[],"read":[]},"ui":["ai-assistant"]},"read":{"disabled":true,"savedObject":{"all":[],"read":[]},"ui":[]}},"subFeatures":[]}
+[2025-07-30T11:18:16.965+00:00][INFO ][plugins.alerting] Registering resources for context "observability.logs".
+[2025-07-30T11:18:16.967+00:00][INFO ][plugins.alerting] Registering resources for context "observability.metrics".
+[2025-07-30T11:18:17.013+00:00][INFO ][plugins.alerting] Registering resources for context "observability.apm".
+[2025-07-30T11:18:17.121+00:00][INFO ][plugins.assetManager] Asset manager plugin [tech preview] is NOT enabled
+[2025-07-30T11:18:17.317+00:00][WARN ][plugins.screenshotting.config] Chromium sandbox provides an additional layer of protection, but is not supported for Linux Ubuntu 20.04 OS. Automatically setting 'xpack.screenshotting.browser.chromium.disableSandbox: true'.
+[2025-07-30T11:18:17.606+00:00][ERROR][elasticsearch-service] Unable to retrieve version information from Elasticsearch nodes. self-signed certificate in certificate chain
+[2025-07-30T11:18:18.260+00:00][INFO ][plugins.screenshotting.chromium] Browser executable: /usr/share/kibana/node_modules/@kbn/screenshotting-plugin/chromium/headless_shell-linux_x64/headless_shell
+
+
+---
+
+$ docker run -d   --name kibana   --net elastic-net   -p 5601:5601   -e "ELASTICSEARCH_HOSTS=https://elasticsearch:9200"  -e "ELASTICSEARCH_USERNAME=kibana_system" -e "ELASTICSEARCH_PASSWORD=J8s+WuaLnezdurEF-qny" -e "ELASTICSEARCH_SSL_VERIFICATIONMODE=none" docker.elastic.co/kibana/kibana:8.10.2
+
+
+[2025-07-30T11:22:19.492+00:00][INFO ][root] Kibana is starting
+[2025-07-30T11:22:19.626+00:00][INFO ][node] Kibana process configured with roles: [background_tasks, ui]
+[2025-07-30T11:22:39.511+00:00][INFO ][plugins-service] Plugin "cloudChat" is disabled.
+[2025-07-30T11:22:39.516+00:00][INFO ][plugins-service] Plugin "cloudExperiments" is disabled.
+[2025-07-30T11:22:39.517+00:00][INFO ][plugins-service] Plugin "cloudFullStory" is disabled.
+[2025-07-30T11:22:39.517+00:00][INFO ][plugins-service] Plugin "cloudGainsight" is disabled.
+[2025-07-30T11:22:39.662+00:00][INFO ][plugins-service] Plugin "profiling" is disabled.
+[2025-07-30T11:22:39.712+00:00][INFO ][plugins-service] Plugin "securitySolutionServerless" is disabled.
+[2025-07-30T11:22:39.713+00:00][INFO ][plugins-service] Plugin "serverless" is disabled.
+[2025-07-30T11:22:39.714+00:00][INFO ][plugins-service] Plugin "serverlessObservability" is disabled.
+[2025-07-30T11:22:39.714+00:00][INFO ][plugins-service] Plugin "serverlessSearch" is disabled.
+[2025-07-30T11:22:40.018+00:00][INFO ][http.server.Preboot] http server running at http://0.0.0.0:5601
+[2025-07-30T11:22:40.243+00:00][INFO ][plugins-system.preboot] Setting up [1] plugins: [interactiveSetup]
+[2025-07-30T11:22:40.280+00:00][WARN ][config.deprecation] The default mechanism for Reporting privileges will work differently in future versions, which will affect the behavior of this cluster. Set "xpack.reporting.roles.enabled" to "false" to adopt the future behavior before upgrading.
+[2025-07-30T11:22:41.755+00:00][INFO ][plugins-system.standard] Setting up [141] plugins: [devTools,translations,share,screenshotMode,usageCollection,telemetryCollectionManager,telemetryCollectionXpack,taskManager,kibanaUsageCollection,cloud,newsfeed,savedObjectsFinder,monitoringCollection,licensing,mapsEms,globalSearch,globalSearchProviders,features,guidedOnboarding,banners,licenseApiGuard,customBranding,ftrApis,fieldFormats,expressions,screenshotting,charts,esUiShared,customIntegrations,contentManagement,dataViews,home,searchprofiler,painlessLab,management,spaces,security,telemetry,licenseManagement,snapshotRestore,lists,files,encryptedSavedObjects,eventLog,actions,notifications,cloudDataMigration,advancedSettings,grokdebugger,console,bfetch,data,watcher,savedObjectsTagging,savedObjectsManagement,unifiedSearch,graph,alerting,embeddable,uiActionsEnhanced,savedSearch,presentationUtil,expressionShape,expressionRevealImage,expressionRepeatImage,expressionMetric,expressionImage,controls,fileUpload,ingestPipelines,ecsDataQualityDashboard,dataViewFieldEditor,visualizations,visTypeXy,visTypeVislib,visTypeVega,visTypeTimeseries,visTypeTimelion,visTypeTagcloud,visTypeTable,visTypeMetric,visTypeMarkdown,visTypeHeatmap,inputControlVis,expressionTagcloud,expressionPartitionVis,visTypePie,expressionMetricVis,expressionLegacyMetricVis,expressionHeatmap,expressionGauge,visTypeGauge,eventAnnotation,expressionXY,dashboard,triggersActionsUi,transform,stackConnectors,stackAlerts,ruleRegistry,lens,maps,discover,reporting,canvas,fleet,indexManagement,rollup,remoteClusters,crossClusterReplication,indexLifecycleManagement,discoverLogExplorer,cloudSecurityPosture,discoverEnhanced,dataVisualizer,cases,timelines,sessionView,kubernetesSecurity,cloudDefend,threatIntelligence,osquery,observabilityAIAssistant,logsShared,observability,observabilityOnboarding,aiops,ml,uptime,synthetics,securitySolution,securitySolutionEss,infra,upgradeAssistant,monitoring,logstash,apm,enterpriseSearch,dashboardEnhanced,dataViewManagement,assetManager]
+[2025-07-30T11:22:41.769+00:00][INFO ][plugins.taskManager] TaskManager is identified by the Kibana UUID: 6219d9e2-a574-409a-93ee-0f622a638b39
+[2025-07-30T11:22:41.808+00:00][INFO ][custom-branding-service] CustomBrandingService registering plugin: customBranding
+[2025-07-30T11:22:41.906+00:00][WARN ][plugins.security.config] Generating a random key for xpack.security.encryptionKey. To prevent sessions from being invalidated on restart, please set xpack.security.encryptionKey in the kibana.yml or use the bin/kibana-encryption-keys command.
+[2025-07-30T11:22:41.906+00:00][WARN ][plugins.security.config] Session cookies will be transmitted over insecure connections. This is not recommended.
+[2025-07-30T11:22:41.941+00:00][WARN ][plugins.security.config] Generating a random key for xpack.security.encryptionKey. To prevent sessions from being invalidated on restart, please set xpack.security.encryptionKey in the kibana.yml or use the bin/kibana-encryption-keys command.
+[2025-07-30T11:22:41.942+00:00][WARN ][plugins.security.config] Session cookies will be transmitted over insecure connections. This is not recommended.
+[2025-07-30T11:22:41.969+00:00][WARN ][plugins.encryptedSavedObjects] Saved objects encryption key is not set. This will severely limit Kibana functionality. Please set xpack.encryptedSavedObjects.encryptionKey in the kibana.yml or use the bin/kibana-encryption-keys command.
+[2025-07-30T11:22:41.974+00:00][WARN ][plugins.actions] APIs are disabled because the Encrypted Saved Objects plugin is missing encryption key. Please set xpack.encryptedSavedObjects.encryptionKey in the kibana.yml or use the bin/kibana-encryption-keys command.
+[2025-07-30T11:22:41.982+00:00][INFO ][plugins.notifications] Email Service Error: Email connector not specified.
+[2025-07-30T11:22:42.101+00:00][WARN ][plugins.alerting] APIs are disabled because the Encrypted Saved Objects plugin is missing encryption key. Please set xpack.encryptedSavedObjects.encryptionKey in the kibana.yml or use the bin/kibana-encryption-keys command.
+[2025-07-30T11:22:42.367+00:00][INFO ][plugins.alerting] Registering resources for context "stack".
+[2025-07-30T11:22:42.396+00:00][WARN ][plugins.reporting.config] Generating a random key for xpack.reporting.encryptionKey. To prevent sessions from being invalidated on restart, please set xpack.reporting.encryptionKey in the kibana.yml or use the bin/kibana-encryption-keys command.
+[2025-07-30T11:22:42.398+00:00][WARN ][plugins.reporting.config] Found 'server.host: "0.0.0.0"' in Kibana configuration. Reporting is not able to use this as the Kibana server hostname. To enable PNG/PDF Reporting to work, 'xpack.reporting.kibanaServer.hostname: localhost' is automatically set in the configuration. You can prevent this message by adding 'xpack.reporting.kibanaServer.hostname: localhost' in kibana.yml.
+[2025-07-30T11:22:42.467+00:00][INFO ][plugins.cloudSecurityPosture] Registered task successfully [Task: cloud_security_posture-stats_task]
+[2025-07-30T11:22:42.532+00:00][INFO ][plugins.alerting] Registering resources for context "observability.slo".
+[2025-07-30T11:22:42.577+00:00][INFO ][plugins.alerting] Registering resources for context "observability.uptime".
+[2025-07-30T11:22:42.625+00:00][INFO ][plugins.alerting] Registering resources for context "security".
+[2025-07-30T11:22:42.664+00:00][INFO ][plugins.securitySolution] {"id":"securitySolutionCases","name":"Cases","order":1100,"category":{"id":"securitySolution","label":"Security","order":4000,"euiIconType":"logoSecurity"},"app":["securitySolutionCases","kibana"],"catalogue":["securitySolution"],"cases":["securitySolution"],"privileges":{"all":{"api":["casesSuggestUserProfiles","bulkGetUserProfiles","securitySolutionFilesCasesCreate","securitySolutionFilesCasesRead","casesGetConnectorsConfigure"],"app":["securitySolutionCases","kibana"],"catalogue":["securitySolution"],"cases":{"create":["securitySolution"],"read":["securitySolution"],"update":["securitySolution"],"push":["securitySolution"]},"savedObject":{"all":["file","fileShare"],"read":["file","fileShare"]},"ui":["create_cases","read_cases","update_cases","push_cases","cases_connectors"]},"read":{"api":["casesSuggestUserProfiles","bulkGetUserProfiles","securitySolutionFilesCasesRead","casesGetConnectorsConfigure"],"app":["securitySolutionCases","kibana"],"catalogue":["securitySolution"],"cases":{"read":["securitySolution"]},"savedObject":{"all":[],"read":["file","fileShare"]},"ui":["read_cases","cases_connectors"]}},"subFeatures":[{"name":"Delete","privilegeGroups":[{"groupType":"independent","privileges":[{"api":["securitySolutionFilesCasesDelete"],"id":"cases_delete","name":"Delete cases and comments","includeIn":"all","savedObject":{"all":["file","fileShare"],"read":["file","fileShare"]},"cases":{"delete":["securitySolution"]},"ui":["delete_cases"]}]}]}]}
+[2025-07-30T11:22:42.667+00:00][INFO ][plugins.securitySolution] {"id":"securitySolutionAssistant","name":"Elastic AI Assistant","order":1100,"category":{"id":"securitySolution","label":"Security","order":4000,"euiIconType":"logoSecurity"},"app":["securitySolutionAssistant","kibana"],"catalogue":["securitySolution"],"minimumLicense":"enterprise","privileges":{"all":{"api":[],"app":["securitySolutionAssistant","kibana"],"catalogue":["securitySolution"],"savedObject":{"all":[],"read":[]},"ui":["ai-assistant"]},"read":{"disabled":true,"savedObject":{"all":[],"read":[]},"ui":[]}},"subFeatures":[]}
+[2025-07-30T11:22:42.682+00:00][INFO ][plugins.alerting] Registering resources for context "observability.logs".
+[2025-07-30T11:22:42.684+00:00][INFO ][plugins.alerting] Registering resources for context "observability.metrics".
+[2025-07-30T11:22:42.724+00:00][INFO ][plugins.alerting] Registering resources for context "observability.apm".
+[2025-07-30T11:22:42.838+00:00][INFO ][plugins.assetManager] Asset manager plugin [tech preview] is NOT enabled
+[2025-07-30T11:22:42.941+00:00][WARN ][plugins.screenshotting.config] Chromium sandbox provides an additional layer of protection, but is not supported for Linux Ubuntu 20.04 OS. Automatically setting 'xpack.screenshotting.browser.chromium.disableSandbox: true'.
+[2025-07-30T11:22:43.222+00:00][INFO ][savedobjects-service] Waiting until all Elasticsearch nodes are compatible with Kibana before starting saved objects migrations...
+[2025-07-30T11:22:43.223+00:00][INFO ][savedobjects-service] Starting saved objects migrations
+[2025-07-30T11:22:43.244+00:00][WARN ][savedobjects-service] Unable to connect to Elasticsearch. Error: index_not_found_exception
+        Root causes:
+                index_not_found_exception: no such index [.kibana]
+[2025-07-30T11:22:43.311+00:00][INFO ][savedobjects-service] [.kibana_alerting_cases] INIT -> CREATE_NEW_TARGET. took: 41ms.
+[2025-07-30T11:22:43.314+00:00][INFO ][savedobjects-service] [.kibana_ingest] INIT -> CREATE_NEW_TARGET. took: 39ms.
+[2025-07-30T11:22:43.319+00:00][INFO ][savedobjects-service] [.kibana] INIT -> CREATE_NEW_TARGET. took: 67ms.
+[2025-07-30T11:22:43.321+00:00][INFO ][savedobjects-service] [.kibana_task_manager] INIT -> CREATE_NEW_TARGET. took: 66ms.
+[2025-07-30T11:22:43.324+00:00][INFO ][savedobjects-service] [.kibana_security_solution] INIT -> CREATE_NEW_TARGET. took: 58ms.
+[2025-07-30T11:22:43.326+00:00][INFO ][savedobjects-service] [.kibana_analytics] INIT -> CREATE_NEW_TARGET. took: 68ms.
+[2025-07-30T11:22:44.350+00:00][INFO ][plugins.screenshotting.chromium] Browser executable: /usr/share/kibana/node_modules/@kbn/screenshotting-plugin/chromium/headless_shell-linux_x64/headless_shell
+[2025-07-30T11:22:44.550+00:00][INFO ][savedobjects-service] [.kibana_alerting_cases] CREATE_NEW_TARGET -> CHECK_VERSION_INDEX_READY_ACTIONS. took: 1239ms.
+[2025-07-30T11:22:44.550+00:00][INFO ][savedobjects-service] [.kibana_alerting_cases] CHECK_VERSION_INDEX_READY_ACTIONS -> MARK_VERSION_INDEX_READY. took: 0ms.
+[2025-07-30T11:22:44.553+00:00][INFO ][savedobjects-service] [.kibana_ingest] CREATE_NEW_TARGET -> CHECK_VERSION_INDEX_READY_ACTIONS. took: 1239ms.
+[2025-07-30T11:22:44.553+00:00][INFO ][savedobjects-service] [.kibana_ingest] CHECK_VERSION_INDEX_READY_ACTIONS -> MARK_VERSION_INDEX_READY. took: 0ms.
+[2025-07-30T11:22:44.555+00:00][INFO ][savedobjects-service] [.kibana_security_solution] CREATE_NEW_TARGET -> CHECK_VERSION_INDEX_READY_ACTIONS. took: 1232ms.
+[2025-07-30T11:22:44.555+00:00][INFO ][savedobjects-service] [.kibana_security_solution] CHECK_VERSION_INDEX_READY_ACTIONS -> MARK_VERSION_INDEX_READY. took: 0ms.
+[2025-07-30T11:22:44.557+00:00][INFO ][savedobjects-service] [.kibana_analytics] CREATE_NEW_TARGET -> CHECK_VERSION_INDEX_READY_ACTIONS. took: 1231ms.
+[2025-07-30T11:22:44.558+00:00][INFO ][savedobjects-service] [.kibana_analytics] CHECK_VERSION_INDEX_READY_ACTIONS -> MARK_VERSION_INDEX_READY. took: 1ms.
+[2025-07-30T11:22:44.908+00:00][INFO ][savedobjects-service] [.kibana_security_solution] MARK_VERSION_INDEX_READY -> DONE. took: 353ms.
+[2025-07-30T11:22:44.909+00:00][INFO ][savedobjects-service] [.kibana_security_solution] Migration completed after 1644ms
+[2025-07-30T11:22:44.911+00:00][INFO ][savedobjects-service] [.kibana_ingest] MARK_VERSION_INDEX_READY -> DONE. took: 358ms.
+[2025-07-30T11:22:44.911+00:00][INFO ][savedobjects-service] [.kibana_ingest] Migration completed after 1636ms
+[2025-07-30T11:22:44.913+00:00][INFO ][savedobjects-service] [.kibana_alerting_cases] MARK_VERSION_INDEX_READY -> DONE. took: 363ms.
+[2025-07-30T11:22:44.913+00:00][INFO ][savedobjects-service] [.kibana_alerting_cases] Migration completed after 1643ms
+[2025-07-30T11:22:44.914+00:00][INFO ][savedobjects-service] [.kibana_analytics] MARK_VERSION_INDEX_READY -> DONE. took: 356ms.
+[2025-07-30T11:22:44.914+00:00][INFO ][savedobjects-service] [.kibana_analytics] Migration completed after 1656ms
+[2025-07-30T11:22:45.014+00:00][INFO ][savedobjects-service] [.kibana_task_manager] CREATE_NEW_TARGET -> CHECK_VERSION_INDEX_READY_ACTIONS. took: 1693ms.
+[2025-07-30T11:22:45.015+00:00][INFO ][savedobjects-service] [.kibana_task_manager] CHECK_VERSION_INDEX_READY_ACTIONS -> MARK_VERSION_INDEX_READY. took: 1ms.
+[2025-07-30T11:22:45.017+00:00][INFO ][savedobjects-service] [.kibana] CREATE_NEW_TARGET -> CHECK_VERSION_INDEX_READY_ACTIONS. took: 1698ms.
+[2025-07-30T11:22:45.018+00:00][INFO ][savedobjects-service] [.kibana] CHECK_VERSION_INDEX_READY_ACTIONS -> MARK_VERSION_INDEX_READY. took: 1ms.
+[2025-07-30T11:22:45.097+00:00][INFO ][savedobjects-service] [.kibana] MARK_VERSION_INDEX_READY -> DONE. took: 79ms.
+[2025-07-30T11:22:45.098+00:00][INFO ][savedobjects-service] [.kibana] Migration completed after 1846ms
+[2025-07-30T11:22:45.158+00:00][INFO ][savedobjects-service] [.kibana_task_manager] MARK_VERSION_INDEX_READY -> DONE. took: 143ms.
+[2025-07-30T11:22:45.158+00:00][INFO ][savedobjects-service] [.kibana_task_manager] Migration completed after 1903ms
+[2025-07-30T11:22:45.166+00:00][INFO ][plugins-system.preboot] Stopping all plugins.
+[2025-07-30T11:22:45.167+00:00][INFO ][plugins-system.standard] Starting [141] plugins: [devTools,translations,share,screenshotMode,usageCollection,telemetryCollectionManager,telemetryCollectionXpack,taskManager,kibanaUsageCollection,cloud,newsfeed,savedObjectsFinder,monitoringCollection,licensing,mapsEms,globalSearch,globalSearchProviders,features,guidedOnboarding,banners,licenseApiGuard,customBranding,ftrApis,fieldFormats,expressions,screenshotting,charts,esUiShared,customIntegrations,contentManagement,dataViews,home,searchprofiler,painlessLab,management,spaces,security,telemetry,licenseManagement,snapshotRestore,lists,files,encryptedSavedObjects,eventLog,actions,notifications,cloudDataMigration,advancedSettings,grokdebugger,console,bfetch,data,watcher,savedObjectsTagging,savedObjectsManagement,unifiedSearch,graph,alerting,embeddable,uiActionsEnhanced,savedSearch,presentationUtil,expressionShape,expressionRevealImage,expressionRepeatImage,expressionMetric,expressionImage,controls,fileUpload,ingestPipelines,ecsDataQualityDashboard,dataViewFieldEditor,visualizations,visTypeXy,visTypeVislib,visTypeVega,visTypeTimeseries,visTypeTimelion,visTypeTagcloud,visTypeTable,visTypeMetric,visTypeMarkdown,visTypeHeatmap,inputControlVis,expressionTagcloud,expressionPartitionVis,visTypePie,expressionMetricVis,expressionLegacyMetricVis,expressionHeatmap,expressionGauge,visTypeGauge,eventAnnotation,expressionXY,dashboard,triggersActionsUi,transform,stackConnectors,stackAlerts,ruleRegistry,lens,maps,discover,reporting,canvas,fleet,indexManagement,rollup,remoteClusters,crossClusterReplication,indexLifecycleManagement,discoverLogExplorer,cloudSecurityPosture,discoverEnhanced,dataVisualizer,cases,timelines,sessionView,kubernetesSecurity,cloudDefend,threatIntelligence,osquery,observabilityAIAssistant,logsShared,observability,observabilityOnboarding,aiops,ml,uptime,synthetics,securitySolution,securitySolutionEss,infra,upgradeAssistant,monitoring,logstash,apm,enterpriseSearch,dashboardEnhanced,dataViewManagement,assetManager]
+[2025-07-30T11:22:45.850+00:00][INFO ][plugins.fleet] Task Fleet-Usage-Sender-1.1.1 scheduled with interval 1h
+[2025-07-30T11:22:45.850+00:00][INFO ][plugins.fleet.fleet:check-deleted-files-task:1.0.1] Started with interval of [1d] and timeout of [2m]
+[2025-07-30T11:22:45.904+00:00][INFO ][plugins.monitoring.monitoring] config sourced from: production cluster
+[2025-07-30T11:22:45.972+00:00][INFO ][plugins.alerting] Installing ILM policy .alerts-ilm-policy
+[2025-07-30T11:22:45.976+00:00][INFO ][plugins.alerting] Installing component template .alerts-framework-mappings
+[2025-07-30T11:22:45.980+00:00][INFO ][plugins.alerting] Installing component template .alerts-legacy-alert-mappings
+[2025-07-30T11:22:46.031+00:00][INFO ][plugins.alerting] Installing component template .alerts-ecs-mappings
+[2025-07-30T11:22:46.046+00:00][INFO ][plugins.ruleRegistry] Installing component template .alerts-technical-mappings
+[2025-07-30T11:22:47.371+00:00][INFO ][http.server.Kibana] http server running at http://0.0.0.0:5601
+[2025-07-30T11:22:47.488+00:00][INFO ][status] Kibana is now degraded
+[2025-07-30T11:22:47.498+00:00][INFO ][plugins.fleet] Task Fleet-Usage-Logger-Task scheduled with interval 15m
+[2025-07-30T11:22:47.596+00:00][INFO ][plugins.observability] Installing SLO shared resources
+[2025-07-30T11:22:47.596+00:00][INFO ][plugins.observability] Installing SLO component template [.slo-observability.sli-mappings]
+[2025-07-30T11:22:47.597+00:00][INFO ][plugins.observability] Installing SLO component template [.slo-observability.sli-settings]
+[2025-07-30T11:22:47.598+00:00][INFO ][plugins.observability] Installing SLO component template [.slo-observability.summary-mappings]
+[2025-07-30T11:22:47.599+00:00][INFO ][plugins.observability] Installing SLO component template [.slo-observability.summary-settings]
+[2025-07-30T11:22:47.714+00:00][INFO ][plugins.monitoring.monitoring.kibana-monitoring] Starting monitoring stats collection
+[2025-07-30T11:22:47.715+00:00][INFO ][plugins.fleet] Beginning fleet setup
+[2025-07-30T11:22:47.774+00:00][INFO ][plugins.telemetry] Telemetry collection is enabled. For more information on telemetry settings, refer to https://www.elastic.co/guide/en/kibana/8.10/telemetry-settings-kbn.html.
+[2025-07-30T11:22:47.845+00:00][INFO ][plugins.eventLog] Installing ILM policy kibana-event-log-policy
+[2025-07-30T11:22:47.847+00:00][INFO ][plugins.reporting.store] Creating ILM policy for managing reporting indices: kibana-reporting
+[2025-07-30T11:22:47.912+00:00][INFO ][plugins.fleet] Agent policies updated by license change: []
+[2025-07-30T11:22:48.152+00:00][INFO ][plugins.ruleRegistry] Installing ILM policy .preview.alerts-security.alerts-policy
+[2025-07-30T11:22:48.155+00:00][INFO ][plugins.alerting] Installing component template .alerts-stack.alerts-mappings
+[2025-07-30T11:22:48.156+00:00][INFO ][plugins.alerting] Installing component template .alerts-observability.slo.alerts-mappings
+[2025-07-30T11:22:48.157+00:00][INFO ][plugins.alerting] Installing component template .alerts-observability.uptime.alerts-mappings
+[2025-07-30T11:22:48.163+00:00][INFO ][plugins.alerting] Installing component template .alerts-security.alerts-mappings
+[2025-07-30T11:22:48.165+00:00][INFO ][plugins.alerting] Installing component template .alerts-observability.logs.alerts-mappings
+[2025-07-30T11:22:48.166+00:00][INFO ][plugins.alerting] Installing component template .alerts-observability.metrics.alerts-mappings
+[2025-07-30T11:22:48.168+00:00][INFO ][plugins.alerting] Installing component template .alerts-observability.apm.alerts-mappings
+[2025-07-30T11:22:48.171+00:00][INFO ][plugins.observability] Installing SLO index template [.slo-observability.sli]
+[2025-07-30T11:22:48.758+00:00][INFO ][plugins.fleet.fleet:check-deleted-files-task:1.0.1] [runTask()] started
+[2025-07-30T11:22:48.777+00:00][INFO ][plugins.fleet] Running Fleet Usage telemetry send task
+[2025-07-30T11:22:48.819+00:00][INFO ][plugins.fleet.fleet:check-deleted-files-task:1.0.1] [runTask()] ended: no files to process
+[2025-07-30T11:22:48.887+00:00][INFO ][plugins.alerting] Installing index template .alerts-observability.slo.alerts-default-index-template
+[2025-07-30T11:22:48.894+00:00][INFO ][plugins.alerting] Installing index template .alerts-observability.metrics.alerts-default-index-template
+[2025-07-30T11:22:48.900+00:00][INFO ][plugins.alerting] Installing index template .alerts-observability.uptime.alerts-default-index-template
+[2025-07-30T11:22:48.902+00:00][INFO ][plugins.alerting] Installing index template .alerts-observability.apm.alerts-default-index-template
+[2025-07-30T11:22:48.924+00:00][INFO ][plugins.alerting] Installing index template .alerts-security.alerts-default-index-template
+[2025-07-30T11:22:48.937+00:00][INFO ][plugins.alerting] Installing index template .alerts-observability.logs.alerts-default-index-template
+[2025-07-30T11:22:48.943+00:00][INFO ][plugins.alerting] Installing index template .alerts-stack.alerts-default-index-template
+[2025-07-30T11:22:48.946+00:00][INFO ][plugins.observability] Installing SLO index template [.slo-observability.summary]
+[2025-07-30T11:22:49.436+00:00][INFO ][plugins.alerting] Creating concrete write index - .internal.alerts-observability.slo.alerts-default-000001
+[2025-07-30T11:22:49.437+00:00][INFO ][plugins.alerting] Creating concrete write index - .internal.alerts-observability.apm.alerts-default-000001
+[2025-07-30T11:22:49.686+00:00][INFO ][status] Kibana is now available (was degraded)
+[2025-07-30T11:22:50.398+00:00][INFO ][plugins.alerting] Creating concrete write index - .internal.alerts-observability.metrics.alerts-default-000001
+[2025-07-30T11:22:50.401+00:00][INFO ][plugins.alerting] Creating concrete write index - .internal.alerts-observability.uptime.alerts-default-000001
+[2025-07-30T11:22:50.403+00:00][INFO ][plugins.alerting] Creating concrete write index - .internal.alerts-security.alerts-default-000001
+[2025-07-30T11:22:50.404+00:00][INFO ][plugins.alerting] Creating concrete write index - .internal.alerts-observability.logs.alerts-default-000001
+[2025-07-30T11:22:50.406+00:00][INFO ][plugins.alerting] Creating concrete write index - .internal.alerts-stack.alerts-default-000001
+[2025-07-30T11:22:51.594+00:00][INFO ][plugins.fleet] Fleet Usage: {"agents_enabled":true,"agents":{"total_enrolled":0,"healthy":0,"unhealthy":0,"offline":0,"inactive":0,"unenrolled":0,"total_all_statuses":0,"updating":0},"fleet_server":{"total_all_statuses":0,"total_enrolled":0,"healthy":0,"unhealthy":0,"offline":0,"updating":0,"num_host_urls":0}}
+[2025-07-30T11:22:53.202+00:00][INFO ][plugins.eventLog] Installing index template .kibana-event-log-8.10.2-template
+[2025-07-30T11:22:53.546+00:00][INFO ][plugins.eventLog] Creating datastream .kibana-event-log-8.10.2
+[2025-07-30T11:22:54.188+00:00][INFO ][plugins.observability] Installing SLO ingest pipeline [.slo-observability.sli.pipeline]
+[2025-07-30T11:22:54.396+00:00][INFO ][plugins.ruleRegistry] Installing component template .preview.alerts-security.alerts-mappings
+[2025-07-30T11:22:54.653+00:00][INFO ][plugins.observabilityAIAssistant.service] Creating concrete write index - .kibana-observability-ai-assistant-conversations-000001
+[2025-07-30T11:22:55.283+00:00][INFO ][plugins.observability] Installing SLO ingest pipeline [.slo-observability.summary.pipeline]
+[2025-07-30T11:22:55.561+00:00][WARN ][plugins.fleet] xpack.encryptedSavedObjects.encryptionKey is not configured, private key passphrase is being stored in plain text
+[2025-07-30T11:22:55.870+00:00][INFO ][plugins.observability] Installing SLO summary transform [slo-summary-occurrences-7d-rolling]
+[2025-07-30T11:22:56.325+00:00][INFO ][plugins.observabilityAIAssistant.service] Creating concrete write index - .kibana-observability-ai-assistant-kb-000001
+[2025-07-30T11:22:56.611+00:00][WARN ][plugins.fleet] xpack.encryptedSavedObjects.encryptionKey is not configured, agent uninstall tokens are being stored in plain text
+[2025-07-30T11:22:56.648+00:00][INFO ][plugins.fleet] Fleet setup completed
+[2025-07-30T11:22:56.651+00:00][INFO ][plugins.securitySolution] Dependent plugin setup complete - Starting ManifestTask
+[2025-07-30T11:22:56.652+00:00][INFO ][plugins.securitySolution.endpoint.policyProtections] App feature [endpoint_policy_protections] is enabled. Nothing to do!
+[2025-07-30T11:22:57.153+00:00][INFO ][plugins.observabilityAIAssistant.service] Successfully set up index assets
+[2025-07-30T11:22:57.226+00:00][INFO ][plugins.observability] Starting SLO summary transform [slo-summary-occurrences-7d-rolling]
+[2025-07-30T11:22:58.441+00:00][INFO ][plugins.observability] Installing SLO summary transform [slo-summary-occurrences-30d-rolling]
+[2025-07-30T11:22:58.524+00:00][INFO ][plugins.observability] Starting SLO summary transform [slo-summary-occurrences-30d-rolling]
+[2025-07-30T11:22:58.940+00:00][INFO ][plugins.observability] Installing SLO summary transform [slo-summary-occurrences-90d-rolling]
+[2025-07-30T11:22:59.020+00:00][INFO ][plugins.observability] Starting SLO summary transform [slo-summary-occurrences-90d-rolling]
+[2025-07-30T11:22:59.404+00:00][INFO ][plugins.observability] Installing SLO summary transform [slo-summary-occurrences-weekly-aligned]
+[2025-07-30T11:22:59.520+00:00][INFO ][plugins.observability] Starting SLO summary transform [slo-summary-occurrences-weekly-aligned]
+[2025-07-30T11:23:00.415+00:00][INFO ][plugins.securitySolution.endpoint:metadata-check-transforms-task:0.0.1] no endpoint installation found
+[2025-07-30T11:23:00.450+00:00][INFO ][plugins.observability] Installing SLO summary transform [slo-summary-occurrences-monthly-aligned]
+[2025-07-30T11:23:00.535+00:00][INFO ][plugins.observability] Starting SLO summary transform [slo-summary-occurrences-monthly-aligned]
+[2025-07-30T11:23:00.681+00:00][INFO ][plugins.synthetics] Installed synthetics index templates
+[2025-07-30T11:23:00.815+00:00][INFO ][plugins.observability] Installing SLO summary transform [slo-summary-timeslices-7d-rolling]
+[2025-07-30T11:23:00.895+00:00][INFO ][plugins.observability] Starting SLO summary transform [slo-summary-timeslices-7d-rolling]
+[2025-07-30T11:23:01.068+00:00][INFO ][plugins.observability] Installing SLO summary transform [slo-summary-timeslices-30d-rolling]
+[2025-07-30T11:23:01.148+00:00][INFO ][plugins.observability] Starting SLO summary transform [slo-summary-timeslices-30d-rolling]
+[2025-07-30T11:23:01.302+00:00][INFO ][plugins.observability] Installing SLO summary transform [slo-summary-timeslices-90d-rolling]
+[2025-07-30T11:23:01.387+00:00][INFO ][plugins.observability] Starting SLO summary transform [slo-summary-timeslices-90d-rolling]
+[2025-07-30T11:23:01.553+00:00][INFO ][plugins.observability] Installing SLO summary transform [slo-summary-timeslices-weekly-aligned]
+[2025-07-30T11:23:01.632+00:00][INFO ][plugins.observability] Starting SLO summary transform [slo-summary-timeslices-weekly-aligned]
+[2025-07-30T11:23:01.788+00:00][INFO ][plugins.observability] Installing SLO summary transform [slo-summary-timeslices-monthly-aligned]
+[2025-07-30T11:23:01.888+00:00][INFO ][plugins.observability] Starting SLO summary transform [slo-summary-timeslices-monthly-aligned]
+[2025-07-30T11:23:02.058+00:00][INFO ][plugins.observability] SLO summary transforms installed and started
+
+----
+
+[peterd:~/job_stuff … ntelsync-backend/intelsync-ingestion-service] [base] 2h10m0s $ mvn spring-boot:run -Dspring-boot.run.profiles=dev
