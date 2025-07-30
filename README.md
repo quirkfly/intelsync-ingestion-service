@@ -45,7 +45,7 @@ mvn spring-boot:run
 
 ## 📤 File Upload API
 
-### Endpoint
+### Endpoints
 
 ```
 POST /api/ingest/upload
@@ -63,6 +63,33 @@ curl -k -F "file=@/path/to/file.pdf" http://localhost:8081/api/ingest/upload
 {
   "message": "File processed and indexed successfully",
   "documentId": "generated-doc-id"
+}
+```
+
+```
+GET /api/ingest/search?q={query}
+```
+
+### Request
+
+```bash
+curl "http://localhost:8081/api/ingest/search?q=keyword"
+```
+
+### Response
+
+```json
+{
+  "totalHits": 10,
+  "results": [
+    {
+      "id": "document-id",
+      "filename": "file.pdf",
+      "contentType": "application/pdf",
+      "detectedType": "application/pdf",
+      "extractedText": "full text of the document"
+    }
+  ]
 }
 ```
 

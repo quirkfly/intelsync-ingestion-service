@@ -19,13 +19,17 @@ import com.cogneworx.intelsync.ingestion.model.IntelDocument;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch.core.IndexResponse;
+import co.elastic.clients.elasticsearch.core.SearchResponse;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.BufferedInputStream;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/ingest")
@@ -99,4 +103,39 @@ public class IngestionController {
                     .body(Map.of("error", "Failed to parse file: " + e.getMessage()));
         }
     }
+
+   @GetMapping("/search")
+    public ResponseEntity<Map<String, Object>> search(
+            @RequestParam("q") String query,
+            @RequestParam(value = "size", defaultValue = "10") int size) {
+
+        try {
+            SearchResponse<IntelDocument> response = elasticsearchClient.search(s -> s
+                            .index("intel-documents")
+                            .query(q -> q
+                                .multiMatch(m -> m
+                                    .query(query)
+                                    .fields("extractedText", "filename", "detectedType", "contentType")
+                                )
+                            )
+                            .size(size),
+                    IntelDocument.class);
+
+            List<IntelDocument> results = response.hits().hits().stream()
+                    .map(hit -> hit.source())
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+
+            Map<String, Object> result = new HashMap<>();
+            Long totalHits = response.hits().total() != null ? response.hits().total().value() : 0L;
+            result.put("total", totalHits);
+            result.put("results", results);
+
+            return ResponseEntity.ok(result);
+
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Search failed: " + e.getMessage()));
+        }
+    } 
 }
